@@ -87,5 +87,5 @@ clean:
 	@echo Cleanup complete!
 
 run: all
-	./$(OUTPUTMAIN)
+	./bin/main.exe ./bin/test.mp4
 	@echo Executing 'run: all' complete!
