@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 
 	av_dump_format(p_format_context, 0, filepath, 0);
 	img_convert_context = sws_getContext(p_codec_context->width, p_codec_context->height, p_codec_context->pix_fmt,
-									 p_codec_context->width, p_codec_context->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+										 p_codec_context->width, p_codec_context->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER))
 	{
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
 	sdl_renderer = SDL_CreateRenderer(screen, -1, 0);
 	sdl_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, p_codec_context->width, p_codec_context->height);
-
+	//  /**< Planar mode: Y + U + V  (3 planes) */
 	sdl_rect.x = 0;
 	sdl_rect.y = 0;
 	sdl_rect.w = screen_w;
@@ -127,6 +127,16 @@ int main(int argc, char *argv[])
 			{
 				sws_scale(img_convert_context, (const unsigned char *const *)p_frame->data, p_frame->linesize, 0, p_codec_context->height,
 						  p_frame_yuv->data, p_frame_yuv->linesize);
+
+				for (int i = 0; i < p_codec_context->height * p_frame_yuv->linesize[1] / 2; i++)
+				{
+					p_frame_yuv->data[1][i] = 0x80;
+				}
+
+				for (int i = 0; i < p_codec_context->height * p_frame_yuv->linesize[2] / 2; i++)
+				{
+					p_frame_yuv->data[2][i] = 0x80;
+				}
 
 				SDL_UpdateYUVTexture(sdl_texture, &sdl_rect,
 									 p_frame_yuv->data[0], p_frame_yuv->linesize[0],
