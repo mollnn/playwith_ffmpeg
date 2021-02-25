@@ -150,11 +150,7 @@ int main(int argc, char *argv[])
 						uint8_t Cb = p_frame_yuv->data[1][y2 * p_frame_yuv->linesize[1] + x2];
 						uint8_t Cr = p_frame_yuv->data[2][y2 * p_frame_yuv->linesize[2] + x2];
 
-						uint8_t R = Y + 1.402 * (Cr - 128);
-						uint8_t G = Y - 0.34414 * (Cb - 128) - 0.71414 * (Cr - 128);
-						uint8_t B = Y + 1.772 * (Cb - 128);
-
-						image.Set(x, y, {R, G, B});
+						image.Set(x, y, yuv2rgb(Y, Cb, Cr));
 					}
 				}
 

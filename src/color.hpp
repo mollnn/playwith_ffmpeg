@@ -65,4 +65,32 @@ vec3 colorUint8ToFloat(uint8_t r, uint8_t g, uint8_t b)
     return {fUint8ToFloat(r), fUint8ToFloat(g), fUint8ToFloat(b)};
 }
 
+/**
+ * @brief 将 x 限制在 [l,r] 内
+ */
+int bound(int l, int x, int r)
+{
+    return std::min(r, std::max(l, x));
+}
+
+/**
+ * @brief yuv2rgb
+ * @param y [0, 255]
+ * @param u [0, 255]
+ * @param v [0, 255]
+ * @return #ABGR
+ */
+vec3 yuv2rgb(uint8_t y, uint8_t u, uint8_t v)
+{
+    int R = (y + 1.403 * (v - 128));
+    int G = (y - 0.343 * (u - 128) - 0.714 * (v - 128));
+    int B = (y + 1.770 * (u - 128));
+
+    R = bound(0, R, 255);
+    G = bound(0, G, 255);
+    B = bound(0, B, 255);
+
+    return {R, G, B};
+}
+
 #endif
