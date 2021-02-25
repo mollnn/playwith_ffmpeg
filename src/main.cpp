@@ -10,6 +10,7 @@ extern "C"
 };
 
 #include "image.hpp"
+#include "timer.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -114,6 +115,21 @@ int main(int argc, char *argv[])
 
 	bool flag_running = true;
 
+	int frame_count = 0;
+	Timer timer;
+
+	vec3 *lut_yuv2rgb = new vec3[256 * 256 * 256];
+	for (int y = 0; y < 256; y++)
+	{
+		for (int u = 0; u < 256; u++)
+		{
+			for (int v = 0; v < 256; v++)
+			{
+				lut_yuv2rgb[(y << 16) + (u << 8) + v] = yuv2rgb(y, u, v);
+			}
+		}
+	}
+
 	while (av_read_frame(p_format_context, packet) >= 0 && flag_running)
 	{
 		if (packet->stream_index == videoindex)
@@ -126,13 +142,9 @@ int main(int argc, char *argv[])
 			}
 			if (flag_got_picture)
 			{
+				frame_count++;
 				sws_scale(img_convert_context, (const unsigned char *const *)p_frame->data, p_frame->linesize, 0, p_codec_context->height,
 						  p_frame_yuv->data, p_frame_yuv->linesize);
-
-				// SDL_UpdateYUVTexture(sdl_texture, &sdl_rect,
-				// 					 p_frame_yuv->data[0], p_frame_yuv->linesize[0],
-				// 					 p_frame_yuv->data[1], p_frame_yuv->linesize[1],
-				// 					 p_frame_yuv->data[2], p_frame_yuv->linesize[2]);
 
 				size_t image_h = p_codec_context->height;
 				size_t image_w = p_codec_context->width;
@@ -147,10 +159,10 @@ int main(int argc, char *argv[])
 						int x2 = x / 2;
 
 						uint8_t Y = p_frame_yuv->data[0][y * p_frame_yuv->linesize[0] + x];
-						uint8_t Cb = p_frame_yuv->data[1][y2 * p_frame_yuv->linesize[1] + x2];
-						uint8_t Cr = p_frame_yuv->data[2][y2 * p_frame_yuv->linesize[2] + x2];
+						uint8_t U = p_frame_yuv->data[1][y2 * p_frame_yuv->linesize[1] + x2];
+						uint8_t V = p_frame_yuv->data[2][y2 * p_frame_yuv->linesize[2] + x2];
 
-						image.Set(x, y, yuv2rgb(Y, Cb, Cr));
+						image.Set(x, y, lut_yuv2rgb[(Y << 16) + (U << 8) + V]);
 					}
 				}
 
@@ -179,7 +191,6 @@ int main(int argc, char *argv[])
 				SDL_RenderClear(sdl_renderer);
 				SDL_RenderCopy(sdl_renderer, sdl_texture, NULL, &sdl_rect);
 				SDL_RenderPresent(sdl_renderer);
-				// SDL_Delay(10);
 			}
 		}
 		av_free_packet(packet);
@@ -199,7 +210,10 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
+		cout << "Frame: " << frame_count << "\tAvgFPS: " << fixed << setprecision(2) << 1.0 * frame_count / timer.Current() << endl;
 	}
+
+	delete[] lut_yuv2rgb;
 
 	if (flag_running)
 	{

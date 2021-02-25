@@ -93,4 +93,24 @@ vec3 yuv2rgb(uint8_t y, uint8_t u, uint8_t v)
     return {R, G, B};
 }
 
+/**
+ * @brief yuv2rgb_16239
+ * @param y [0, 255]
+ * @param u [16, 239]
+ * @param v [16, 239]
+ * @return #ABGR
+ */
+vec3 yuv2rgb_16239(uint8_t y, uint8_t u, uint8_t v)
+{
+    int R = 1.164 * (y - 16) + 1.596 * (v - 128);
+    int G = 1.164 * (y - 16) - 0.813 * (v - 128) - 0.391 * (u - 128);
+    int B = 1.164 * (y - 16) + 2.018 * (u - 128);
+
+    R = bound(0, R, 255);
+    G = bound(0, G, 255);
+    B = bound(0, B, 255);
+
+    return {R, G, B};
+}
+
 #endif
