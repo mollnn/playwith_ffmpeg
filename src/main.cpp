@@ -9,6 +9,8 @@ extern "C"
 #include <libavutil/imgutils.h>
 };
 
+#include "image.hpp"
+
 int main(int argc, char *argv[])
 {
 	AVFormatContext *p_format_context;
@@ -104,8 +106,7 @@ int main(int argc, char *argv[])
 	}
 
 	sdl_renderer = SDL_CreateRenderer(screen, -1, 0);
-	sdl_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, p_codec_context->width, p_codec_context->height);
-	//  /**< Planar mode: Y + U + V  (3 planes) */
+	sdl_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, p_codec_context->width, p_codec_context->height);
 	sdl_rect.x = 0;
 	sdl_rect.y = 0;
 	sdl_rect.w = screen_w;
@@ -128,20 +129,56 @@ int main(int argc, char *argv[])
 				sws_scale(img_convert_context, (const unsigned char *const *)p_frame->data, p_frame->linesize, 0, p_codec_context->height,
 						  p_frame_yuv->data, p_frame_yuv->linesize);
 
-				for (int i = 0; i < p_codec_context->height * p_frame_yuv->linesize[1] / 2; i++)
+				// SDL_UpdateYUVTexture(sdl_texture, &sdl_rect,
+				// 					 p_frame_yuv->data[0], p_frame_yuv->linesize[0],
+				// 					 p_frame_yuv->data[1], p_frame_yuv->linesize[1],
+				// 					 p_frame_yuv->data[2], p_frame_yuv->linesize[2]);
+
+				size_t image_h = p_codec_context->height;
+				size_t image_w = p_codec_context->width;
+
+				Image image(image_w, image_h);
+
+				for (int y = 0; y < image_h; y++)
 				{
-					p_frame_yuv->data[1][i] = 0x80;
+					for (int x = 0; x < image_w; x++)
+					{
+						int y2 = y / 2;
+						int x2 = x / 2;
+
+						uint8_t Y = p_frame_yuv->data[0][y * p_frame_yuv->linesize[0] + x];
+						uint8_t Cb = p_frame_yuv->data[1][y2 * p_frame_yuv->linesize[1] + x2];
+						uint8_t Cr = p_frame_yuv->data[2][y2 * p_frame_yuv->linesize[2] + x2];
+
+						uint8_t R = Y + 1.402 * (Cr - 128);
+						uint8_t G = Y - 0.34414 * (Cb - 128) - 0.71414 * (Cr - 128);
+						uint8_t B = Y + 1.772 * (Cb - 128);
+
+						image.Set(x, y, {R, G, B});
+					}
 				}
 
-				for (int i = 0; i < p_codec_context->height * p_frame_yuv->linesize[2] / 2; i++)
+				uint8_t *pixels = new uint8_t[image_h * image_w * 4];
+				for (int y = 0; y < image_h; y++)
 				{
-					p_frame_yuv->data[2][i] = 0x80;
+					for (int x = 0; x < image_w; x++)
+					{
+						vec3 vec = image.Get(x, y);
+
+						uint8_t r = vec.x;
+						uint8_t g = vec.y;
+						uint8_t b = vec.z;
+
+						pixels[y * image_w * 4 + x * 4 + 0] = 0;
+						pixels[y * image_w * 4 + x * 4 + 1] = b;
+						pixels[y * image_w * 4 + x * 4 + 2] = g;
+						pixels[y * image_w * 4 + x * 4 + 3] = r;
+					}
 				}
 
-				SDL_UpdateYUVTexture(sdl_texture, &sdl_rect,
-									 p_frame_yuv->data[0], p_frame_yuv->linesize[0],
-									 p_frame_yuv->data[1], p_frame_yuv->linesize[1],
-									 p_frame_yuv->data[2], p_frame_yuv->linesize[2]);
+				SDL_UpdateTexture(sdl_texture, &sdl_rect, pixels, image_w * 4);
+
+				delete[] pixels;
 
 				SDL_RenderClear(sdl_renderer);
 				SDL_RenderCopy(sdl_renderer, sdl_texture, NULL, &sdl_rect);
