@@ -118,17 +118,15 @@ int main(int argc, char *argv[])
 	int frame_count = 0;
 	Timer timer;
 
-	vec3 *lut_yuv2rgb = new vec3[256 * 256 * 256];
-	for (int y = 0; y < 256; y++)
-	{
-		for (int u = 0; u < 256; u++)
-		{
-			for (int v = 0; v < 256; v++)
-			{
-				lut_yuv2rgb[(y << 16) + (u << 8) + v] = yuv2rgb(y, u, v);
-			}
-		}
-	}
+	uint8_t *boost_table_yuv2rgb = new uint8_t[4 * 256];
+	for (int i = 0; i < 256; i++)
+		boost_table_yuv2rgb[i + 0] = 1.403 * (i - 128);
+	for (int i = 0; i < 256; i++)
+		boost_table_yuv2rgb[i + 256] = 0.343 * (i - 128);
+	for (int i = 0; i < 256; i++)
+		boost_table_yuv2rgb[i + 512] = 0.714 * (i - 128);
+	for (int i = 0; i < 256; i++)
+		boost_table_yuv2rgb[i + 768] = 1.770 * (i - 128);
 
 	while (av_read_frame(p_format_context, packet) >= 0 && flag_running)
 	{
@@ -149,20 +147,27 @@ int main(int argc, char *argv[])
 				size_t image_h = p_codec_context->height;
 				size_t image_w = p_codec_context->width;
 
-				Image image(image_w, image_h);
+				Image_RGB888 image(image_w, image_h);
 
 				for (int y = 0; y < image_h; y++)
 				{
+					int y2 = y / 2;
+					int y_off_y = y * p_frame_yuv->linesize[0];
+					int y_off_u = y2 * p_frame_yuv->linesize[1];
+					int y_off_v = y2 * p_frame_yuv->linesize[2];
 					for (int x = 0; x < image_w; x++)
 					{
-						int y2 = y / 2;
 						int x2 = x / 2;
 
-						uint8_t Y = p_frame_yuv->data[0][y * p_frame_yuv->linesize[0] + x];
-						uint8_t U = p_frame_yuv->data[1][y2 * p_frame_yuv->linesize[1] + x2];
-						uint8_t V = p_frame_yuv->data[2][y2 * p_frame_yuv->linesize[2] + x2];
+						uint8_t Y = p_frame_yuv->data[0][y_off_y + x];
+						uint8_t U = p_frame_yuv->data[1][y_off_u + x2];
+						uint8_t V = p_frame_yuv->data[2][y_off_v + x2];
 
-						image.Set(x, y, lut_yuv2rgb[(Y << 16) + (U << 8) + V]);
+						uint8_t R = (Y + boost_table_yuv2rgb[0 + V]);
+						uint8_t G = (Y - boost_table_yuv2rgb[256 + U] - boost_table_yuv2rgb[512 + V]);
+						uint8_t B = (Y + boost_table_yuv2rgb[768 + U]);
+
+						image.Set(x, y, {R, G, B});
 					}
 				}
 
@@ -171,7 +176,7 @@ int main(int argc, char *argv[])
 				{
 					for (int x = 0; x < image_w; x++)
 					{
-						vec3 vec = image.Get(x, y);
+						vec3_uint8 vec = image.Get(x, y);
 
 						uint8_t r = vec.x;
 						uint8_t g = vec.y;
@@ -191,6 +196,12 @@ int main(int argc, char *argv[])
 				SDL_RenderClear(sdl_renderer);
 				SDL_RenderCopy(sdl_renderer, sdl_texture, NULL, &sdl_rect);
 				SDL_RenderPresent(sdl_renderer);
+				
+				cout << "Frame: " << frame_count << "\tAvgFPS: " << fixed << setprecision(2) << 1.0 * frame_count / timer.Current() << endl;
+			}
+			else
+			{
+				cerr << "flag_got_picture = false" << endl;
 			}
 		}
 		av_free_packet(packet);
@@ -210,10 +221,9 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		cout << "Frame: " << frame_count << "\tAvgFPS: " << fixed << setprecision(2) << 1.0 * frame_count / timer.Current() << endl;
 	}
 
-	delete[] lut_yuv2rgb;
+	delete[] boost_table_yuv2rgb;
 
 	if (flag_running)
 	{
