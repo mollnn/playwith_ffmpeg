@@ -219,3 +219,9 @@ lib/*
 ._SDL
 
 include/lib*
+
+*.mp4
+*.mkv
+
+bin/*.mp4
+bin/*.mkv
