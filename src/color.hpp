@@ -113,4 +113,22 @@ vec3 yuv2rgb_16239(uint8_t y, uint8_t u, uint8_t v)
     return {R, G, B};
 }
 
+/**
+ * @brief rgb2yuv
+ * @param rgb [0, 255]
+ * @param y [0, 255]
+ * @param u [0, 255]
+ * @param v [0, 255]
+ */
+void rgb2yuv(const vec3_uint8 &rgb, uint8_t &y, uint8_t &u, uint8_t &v)
+{
+    uint8_t R = rgb.x;
+    uint8_t G = rgb.y;
+    uint8_t B = rgb.z;
+
+    y = 0.299 * R + 0.587 * G + 0.114 * B;
+    u = -0.169 * R - 0.331 * G + 0.500 * B + 128;
+    v = 0.500 * R - 0.419 * G - 0.081 * B + 128;
+}
+
 #endif
