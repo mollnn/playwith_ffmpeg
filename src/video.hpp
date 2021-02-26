@@ -18,7 +18,7 @@ class VideoEncoder
 {
     const AVCodec *codec;
     AVCodecContext *c;
-    int i, ret, x, y, got_output;
+    int frame_count, ret, x, y, got_output;
     FILE *f;
     AVFrame *frame;
     AVPacket pkt;
@@ -28,7 +28,7 @@ class VideoEncoder
     int video_w;
     int video_h;
     int bitrate;
-    float fps;
+    int fps;
     int gop;
 
     void encode_frame(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
@@ -60,7 +60,7 @@ class VideoEncoder
     }
 
 public:
-    VideoEncoder(const char *filename, const char *codec_name, int video_w, int video_h, int bitrate, float fps, int gop)
+    VideoEncoder(const char *filename, const char *codec_name, int video_w, int video_h, int bitrate, int fps, int gop)
         : filename(filename), codec_name(codec_name), video_w(video_w), video_h(video_h), bitrate(bitrate), fps(fps), gop(gop)
     {
         endcode[0] = 0;
@@ -126,10 +126,7 @@ public:
             fprintf(stderr, "Could not allocate the video frame data\n");
             exit(1);
         }
-    }
 
-    void NewFrame(Image_RGB888 &image)
-    {
         av_init_packet(&pkt);
         pkt.data = NULL;
         pkt.size = 0;
@@ -138,6 +135,13 @@ public:
         ret = av_frame_make_writable(frame);
         if (ret < 0)
             exit(1);
+
+        frame_count = 0;
+    }
+
+    void NewFrame(Image_RGB888 &image)
+    {
+        frame_count++;
 
         for (y = 0; y < c->height; y++)
         {
@@ -162,7 +166,7 @@ public:
             }
         }
 
-        frame->pts = i;
+        frame->pts = frame_count;
         encode_frame(c, frame, &pkt, f);
     }
 

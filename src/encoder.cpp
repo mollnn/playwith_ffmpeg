@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
 {
     int width = 1920;
     int height = 804;
-    VideoEncoder video_encoder("output.mp4", "libx264", width, height, 1000000, 23.976, 10);
+    VideoEncoder video_encoder("output.mp4", "libx264", width, height, 1000000, 24, 10);
 
     Image_RGB888 image(width, height);
     for (int i = 0; i < 100; i++)

@@ -1,5 +1,14 @@
 {
     "files.associations": {
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "*.tcc": "cpp",
+        "bitset": "cpp",
+        "complex": "cpp",
+        "istream": "cpp",
+        "streambuf": "cpp",
+        "regex": "cpp",
+        "valarray": "cpp",
+        "variant": "cpp",
+        "condition_variable": "cpp"
     }
 }
